@@ -104,46 +104,46 @@ resource "aws_iam_role_policy_attachment" "attach_s3" {
 }
 
 # FUNÇÃO LAMBDA 
-# resource "aws_lambda_function" "projeto_function" {
-#   function_name = "football_projeto_daily"
-#   role          = aws_iam_role.lambda_role.arn
-#   package_type  = "Image"
+resource "aws_lambda_function" "projeto_function" {
+  function_name = "football_projeto_daily"
+  role          = aws_iam_role.lambda_role.arn
+  package_type  = "Image"
   
-#   image_uri     = "${aws_ecr_repository.repo.repository_url}:latest"
+  image_uri     = "${aws_ecr_repository.repo.repository_url}:latest"
   
-#   timeout       = 60
-#   memory_size   = 512 
+  timeout       = 60
+  memory_size   = 512 
 
-#   environment {
-#     variables = {
-#       API_FOOTBALL_DATA_KEY = data.aws_ssm_parameter.api_key.value
-#       AWS_S3_BUCKET_NAME    = aws_s3_bucket.datalake_bucket.bucket
-#     }
-#   }
+  environment {
+    variables = {
+      API_FOOTBALL_DATA_KEY = data.aws_ssm_parameter.api_key.value
+      AWS_S3_BUCKET_NAME    = aws_s3_bucket.datalake_bucket.bucket
+    }
+  }
 
-#   # impede que o Terraform reverta a imagem quando o GitHub Actions atualizar o Lambda
-#   lifecycle {
-#     ignore_changes = [image_uri]
-#   }
-# }
+  # impede que o Terraform reverta a imagem quando o GitHub Actions atualizar o Lambda
+  lifecycle {
+    ignore_changes = [image_uri]
+  }
+}
 
-# # EVENTBRIDGE
-# resource "aws_cloudwatch_event_rule" "daily_schedule" {
-#   name                = "projeto-futebol-daily"
-#   description         = "Dispara o ETL todo dia as 08:00 UTC"
-#   schedule_expression = "cron(0 8 * * ? *)"
-# }
+# EVENTBRIDGE
+resource "aws_cloudwatch_event_rule" "daily_schedule" {
+  name                = "projeto-futebol-daily"
+  description         = "Dispara o ETL todo dia as 08:00 UTC"
+  schedule_expression = "cron(0 8 * * ? *)"
+}
 
-# resource "aws_cloudwatch_event_target" "trigger_lambda" {
-#   rule      = aws_cloudwatch_event_rule.daily_schedule.name
-#   target_id = "lambda"
-#   arn       = aws_lambda_function.projeto_function.arn
-# }
+resource "aws_cloudwatch_event_target" "trigger_lambda" {
+  rule      = aws_cloudwatch_event_rule.daily_schedule.name
+  target_id = "lambda"
+  arn       = aws_lambda_function.projeto_function.arn
+}
 
-# resource "aws_lambda_permission" "allow_eventbridge" {
-#   statement_id  = "AllowExecutionFromEventBridge"
-#   action        = "lambda:InvokeFunction"
-#   function_name = aws_lambda_function.projeto_function.function_name
-#   principal     = "events.amazonaws.com"
-#   source_arn    = aws_cloudwatch_event_rule.daily_schedule.arn
-# }
+resource "aws_lambda_permission" "allow_eventbridge" {
+  statement_id  = "AllowExecutionFromEventBridge"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.projeto_function.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.daily_schedule.arn
+}
