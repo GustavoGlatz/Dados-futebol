@@ -1,0 +1,149 @@
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = "sa-east-1"
+}
+
+# Data sources
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
+data "aws_ssm_parameter" "api_key" {
+  name            = "/projeto-futebol/api-key"
+  with_decryption = true # para ler SecureString
+}
+
+# BUCKET S3
+resource "aws_s3_bucket" "datalake_bucket" {
+  bucket = "datalake-football-project-glatz"
+  
+  # Permite destruir bucket com arquivos
+  force_destroy = true 
+
+  tags = {
+    Name        = "Projeto futebol"
+    Environment = "Dev"
+    Project     = "Treinamento Engenharia de Dados"
+  }
+}
+
+# REGRA DE LIMPEZA
+resource "aws_s3_bucket_lifecycle_configuration" "limpeza_diaria" {
+  bucket = aws_s3_bucket.datalake_bucket.id
+
+  rule {
+    id     = "regra-apagar-tudo-1-dia"
+    status = "Enabled"
+
+    filter {
+      prefix = "" 
+    }
+
+    expiration {
+      days = 1
+    }
+    
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 1
+    }
+  }
+}
+
+# ECR REPOSITORY
+resource "aws_ecr_repository" "repo" {
+  name                 = "projeto-futebol" # Nome do repo
+  image_tag_mutability = "MUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+  
+  force_delete = true 
+}
+
+# IAM ROLE
+resource "aws_iam_role" "lambda_role" {
+  name = "football_projeto_role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = { Service = "lambda.amazonaws.com" } 
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_logs" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_policy" "s3_write_policy" {
+  name = "lambda_s3_write"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = ["s3:PutObject"]
+      Effect = "Allow"
+      Resource = "${aws_s3_bucket.datalake_bucket.arn}/*"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "attach_s3" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = aws_iam_policy.s3_write_policy.arn
+}
+
+# FUNÇÃO LAMBDA 
+# resource "aws_lambda_function" "projeto_function" {
+#   function_name = "football_projeto_daily"
+#   role          = aws_iam_role.lambda_role.arn
+#   package_type  = "Image"
+  
+#   image_uri     = "${aws_ecr_repository.repo.repository_url}:latest"
+  
+#   timeout       = 60
+#   memory_size   = 512 
+
+#   environment {
+#     variables = {
+#       API_FOOTBALL_DATA_KEY = data.aws_ssm_parameter.api_key.value
+#       AWS_S3_BUCKET_NAME    = aws_s3_bucket.datalake_bucket.bucket
+#     }
+#   }
+
+#   # impede que o Terraform reverta a imagem quando o GitHub Actions atualizar o Lambda
+#   lifecycle {
+#     ignore_changes = [image_uri]
+#   }
+# }
+
+# # EVENTBRIDGE
+# resource "aws_cloudwatch_event_rule" "daily_schedule" {
+#   name                = "projeto-futebol-daily"
+#   description         = "Dispara o ETL todo dia as 08:00 UTC"
+#   schedule_expression = "cron(0 8 * * ? *)"
+# }
+
+# resource "aws_cloudwatch_event_target" "trigger_lambda" {
+#   rule      = aws_cloudwatch_event_rule.daily_schedule.name
+#   target_id = "lambda"
+#   arn       = aws_lambda_function.projeto_function.arn
+# }
+
+# resource "aws_lambda_permission" "allow_eventbridge" {
+#   statement_id  = "AllowExecutionFromEventBridge"
+#   action        = "lambda:InvokeFunction"
+#   function_name = aws_lambda_function.projeto_function.function_name
+#   principal     = "events.amazonaws.com"
+#   source_arn    = aws_cloudwatch_event_rule.daily_schedule.arn
+# }
