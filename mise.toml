@@ -1,3 +1,4 @@
 [tools]
+java = "openjdk-17"
 python = "3.12.12"
 terraform = "1.14.3"

@@ -4,11 +4,11 @@ name: Deploy ETL to AWS Lambda
 on:
   push:
     branches:
-      - main  # Roda sempre que houver push na branch main
+      - main       # Roda na branch main apenas se:
     paths:
-      - '**.py'          # Roda se mudar arquivos Python
-      - 'Dockerfile'     # Roda se mudar o Dockerfile
-      - 'requirements.txt' # Roda se mudar as dependências
+      - '**.py'          # mudar arquivos Python
+      - 'Dockerfile'     # mudar o Dockerfile
+      - 'requirements.txt' # mudar as dependências
 
 jobs:
   deploy:
@@ -40,10 +40,7 @@ jobs:
         ECR_REPOSITORY: projeto-futebol 
         IMAGE_TAG: latest
       run: |
-        # 1. Build da imagem
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-        
-        # 2. Push para a AWS
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
     # Atualizar o Lambda (enviar e recarregar)
@@ -55,3 +52,12 @@ jobs:
           --function-name $LAMBDA_NAME \
           --image-uri ${{ steps.login-ecr.outputs.registry }}/projeto-futebol:latest \
           --publish
+
+    # Enviar o Script do Glue para o S3
+    - name: Upload Glue Script to S3
+      env:
+        BUCKET_NAME: ${{ secrets.AWS_S3_BUCKET_NAME }} 
+      run: |
+        aws s3 cp etl_script.py s3://$BUCKET_NAME/scripts/etl_script.py
+        
+        echo "Script Glue atualizado com sucesso no S3!"

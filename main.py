@@ -14,7 +14,7 @@ load_dotenv()
 
 class FootballDataOrgETL:
     def __init__(self):
-        # 1. Configurações da API de Futebol
+        # Configurações da API de Futebol
         self.base_url = "https://api.football-data.org/v4"
         self.api_key = os.getenv("API_FOOTBALL_DATA_KEY") or os.getenv("API_FOOTBALL_KEY")
         
@@ -24,16 +24,15 @@ class FootballDataOrgETL:
         self.headers = { "X-Auth-Token": self.api_key }
         self.competitions = ["BSA", "CL"]
 
-        # 2. Configurações da AWS S3
+        # Configurações da AWS S3
         self.bucket_name = os.getenv("AWS_S3_BUCKET_NAME")
         if not self.bucket_name:
             raise ValueError("ERRO: Variável AWS_S3_BUCKET_NAME não definida.")
 
-        # O boto3 busca credenciais automaticamente (Env vars, ~/.aws/credentials ou IAM Role)
         self.s3_client = boto3.client('s3')
 
     def get_matches(self):
-        """Busca os dados (Mantido igual ao passo anterior)"""
+        """Busca os dados"""
         today = datetime.now().strftime("%Y-%m-%d")
         current_year = datetime.now().year
         all_matches_data = []
@@ -77,7 +76,6 @@ class FootballDataOrgETL:
             logging.warning("Nenhum dado para salvar no S3.")
             return
 
-        # 1. Definição do Nome do Arquivo (Key)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"matches_data_{timestamp}.json"
         
@@ -85,7 +83,7 @@ class FootballDataOrgETL:
         s3_key = f"raw/{filename}"
 
         try:
-            # 2. Serialização em Memória
+            # Serialização em Memória
             # json.dumps converte o objeto Python (dict) para String JSON
             json_string = json.dumps(data, ensure_ascii=False, indent=4)
             
@@ -94,25 +92,25 @@ class FootballDataOrgETL:
 
             logging.info(f"Iniciando upload para s3://{self.bucket_name}/{s3_key}")
 
-            # 3. Upload usando put_object
+            # Upload usando put_object
             self.s3_client.put_object(
                 Bucket=self.bucket_name,
                 Key=s3_key,
                 Body=json_bytes,
-                ContentType='application/json'  # Importante para visualização correta no console AWS
+                ContentType='application/json'
             )
 
             logging.info("Upload concluído com sucesso!")
 
         except boto3.exceptions.Boto3Error as e:
-            # Captura erros específicos da AWS (ex: Bucket não existe, Sem permissão)
+            # Captura erros específicos da AWS
             logging.error(f"Erro AWS S3: {e}")
         except Exception as e:
             logging.error(f"Erro genérico ao salvar no S3: {e}")
 
 def lambda_handler(event, context):
     """
-    Esta é a função que a AWS chama quando o relógio despertar.
+    Função que a AWS chama quando o relógio despertar.
     'event': Dados sobre o gatilho (não usaremos aqui)
     'context': Dados sobre o ambiente de execução
     """

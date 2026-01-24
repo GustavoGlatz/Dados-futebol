@@ -19,3 +19,7 @@ wheels/
 .terraform.lock.hcl
 *.tfstate
 *.tfstate.backup
+
+# Arquivos de teste
+teste-local/
+plano.md
