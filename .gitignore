@@ -9,6 +9,7 @@ wheels/
 # Virtual environments
 .venv
 .env
+dashboard/.streamlit/
 
 # Arquivos de dados
 *.json

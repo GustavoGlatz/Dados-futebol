@@ -49,19 +49,33 @@ df_silver = df_exploded.select(
     col("match.homeTeam.name").alias("home_team"),
     col("match.awayTeam.name").alias("away_team"),
     col("match.score.fullTime.home").alias("score_home"),
-    col("match.score.fullTime.away").alias("score_away")
+    col("match.score.fullTime.away").alias("score_away"),
+    col("match.homeTeam.crest").alias("logo_home"),
+    col("match.awayTeam.crest").alias("logo_away")
 )
 
-df_silver.write.mode("overwrite").parquet(f"{base_path}/silver/matches_cleaned")
+leagues_data = [
+("CL", "Champions League"),
+("BSA", "Brasileirão Série A")
+]
+df_leagues = spark.createDataFrame(leagues_data, ["code", "league_name"])
+
+df_enriched = df_silver.join(
+    df_leagues,
+    df_silver.competition_code == df_leagues.code,
+    "left"
+).drop("code") # Remove a coluna duplicada do join
+
+df_enriched.write.mode("overwrite").parquet(f"{base_path}/silver/matches_cleaned")
 
 # CAMADA OURO (Agregação)
 # Criação de View temporária para usar SQL
-df_silver.createOrReplaceTempView("silver_matches")
+df_enriched.createOrReplaceTempView("silver_matches")
 
 # Agrega os dados para obter estatísticas diárias por competição
 df_gold = spark.sql("""
     SELECT 
-        competition_code,
+        league_name,
         DATE(from_utc_timestamp(match_date, 'America/Sao_Paulo')) as match_day,
         
         COUNT(match_id) as total_matches,
@@ -73,7 +87,7 @@ df_gold = spark.sql("""
     FROM silver_matches
     
     GROUP BY 
-        competition_code, 
+        league_name, 
         DATE(from_utc_timestamp(match_date, 'America/Sao_Paulo'))
         
     ORDER BY 
