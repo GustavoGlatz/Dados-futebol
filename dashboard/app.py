@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import datetime
+from datetime import datetime
 
 # CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(
@@ -87,6 +87,8 @@ if not matches_filtered.empty:
             st.markdown(f"<div class='score-text'>{row.get('score_home', 0)}</div>", unsafe_allow_html=True)
             
         with c3:
+            horario = row.get('match_time', '--:--')
+            st.markdown(f"<div style='text-align: center; font-size: 12px; color: #555; margin-bottom: -10px;'>{horario}</div>", unsafe_allow_html=True)
             st.markdown("<div class='vs-text'>X</div>", unsafe_allow_html=True)
             
         with c4:

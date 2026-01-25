@@ -3,7 +3,7 @@ from awsglue.utils import getResolvedOptions
 from pyspark.context import SparkContext
 from awsglue.context import GlueContext
 from awsglue.job import Job
-from pyspark.sql.functions import current_timestamp, input_file_name, col, explode, to_date, sum, count, round, avg, to_timestamp 
+from pyspark.sql.functions import current_timestamp, input_file_name, col, explode, to_date, sum, count, round, avg, date_format, from_utc_timestamp, to_timestamp
 
 # Configuração Inicial do Glue
 
@@ -44,7 +44,11 @@ df_silver = df_exploded.select(
     col("competition_code"),
     col("season"),
     col("match.id").alias("match_id"),
-    to_timestamp(col("match.utcDate")).alias("match_date"),
+    to_timestamp(col("match.utcDate")).alias("match_date_full"),
+    date_format(
+        to_timestamp(col("match.utcDate")), 
+        "HH:mm"
+    ).alias("match_time"),
     col("match.status").alias("status"),
     col("match.homeTeam.name").alias("home_team"),
     col("match.awayTeam.name").alias("away_team"),
@@ -76,7 +80,7 @@ df_enriched.createOrReplaceTempView("silver_matches")
 df_gold = spark.sql("""
     SELECT 
         league_name,
-        DATE(from_utc_timestamp(match_date, 'America/Sao_Paulo')) as match_day,
+        DATE(match_date_full) as match_day,
         
         COUNT(match_id) as total_matches,
         
@@ -88,7 +92,7 @@ df_gold = spark.sql("""
     
     GROUP BY 
         league_name, 
-        DATE(from_utc_timestamp(match_date, 'America/Sao_Paulo'))
+        DATE(match_date_full)
         
     ORDER BY 
         match_day DESC, 
