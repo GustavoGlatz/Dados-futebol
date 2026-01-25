@@ -14,6 +14,8 @@ Este projeto é uma **Agenda de Futebol** desenvolvido como portfólio de Engenh
 
 Embora o produto final seja um dashboard interativo, o foco central deste repositório é demonstrar a implementação de um pipeline de dados **End-to-End** completo, utilizando práticas modernas de **Data Lakehouse**, integração contínua (CI/CD) e Infraestrutura como Código (IaC).
 
+### Acesso ao Dashboard: [Agenda Futebol Hoje](https://dados-futebol.streamlit.app/) 
+
 ## 🏗 Arquitetura da Solução
 
 A solução foi arquitetada para garantir confiabilidade, escalabilidade e baixo acoplamento entre os componentes. O fluxo de dados segue o padrão de Data Lakehouse com camadas segregadas.
