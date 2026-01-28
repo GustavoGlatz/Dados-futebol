@@ -1,4 +1,5 @@
 import sys
+import boto3
 from awsglue.utils import getResolvedOptions
 from pyspark.context import SparkContext
 from awsglue.context import GlueContext
@@ -19,6 +20,12 @@ job.init(args['JOB_NAME'], args)
 
 bucket_name = args['BUCKET_NAME']
 base_path = f"s3://{bucket_name}"
+
+s3 = boto3.resource('s3')
+bucket = s3.Bucket(bucket_name)
+bucket.objects.filter(Prefix="bronze/").delete()
+bucket.objects.filter(Prefix="silver/").delete()
+bucket.objects.filter(Prefix="gold/").delete()
 
 
 # CAMADA BRONZE (Raw JSON -> Parquet)
