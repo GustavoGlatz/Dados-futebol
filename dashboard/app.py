@@ -43,7 +43,7 @@ def load_data():
         df_silver = pd.read_parquet(path_silver, storage_options=storage_options)
         
         # Carregando GOLD (Estatísticas agregadas)
-        path_gold = f"s3://{BUCKET_NAME}/gold/daily_league_stats.parquet"
+        path_gold = f"s3://{BUCKET_NAME}/gold/daily_league_stats"
         df_gold = pd.read_parquet(path_gold, storage_options=storage_options)
 
         return df_silver, df_gold
@@ -84,7 +84,7 @@ if not matches_filtered.empty:
                 st.write(row['home_team'])
         
         with c2:
-            st.markdown(f"<div class='score-text'>{row.get('score_home', 0)}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='score-text'>{row.get('score_home') if row.get('score_home') is not None else 0}</div>", unsafe_allow_html=True)
             
         with c3:
             horario = row.get('match_time', '--:--')
@@ -92,7 +92,7 @@ if not matches_filtered.empty:
             st.markdown("<div class='vs-text'>X</div>", unsafe_allow_html=True)
             
         with c4:
-            st.markdown(f"<div class='score-text'>{row.get('score_away', 0)}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='score-text'>{row.get('score_away') if row.get('score_away') is not None else 0}</div>", unsafe_allow_html=True)
             
         with c5:
             if 'logo_away' in row and row['logo_away']:
@@ -116,13 +116,13 @@ if not stats_filtered.empty:
     with col_a:
         st.metric(
             label="Quantidade de gols na rodada",
-            value=stat_row.get('total_goals', 0)
+            value=stat_row.get('total_goals') if stat_row.get('total_goals') is not None else 0
         ) 
         
     with col_b:
         st.metric(
             label="Média de gols na rodada",
-            value=f"{stat_row.get('avg_goals_match', 0):.2f}"
+            value=f"{stat_row.get('avg_goals_match') if stat_row.get('avg_goals_match') is not None else 0:.2f}"
         )
 else:
     st.warning("Não há estatísticas para hoje")

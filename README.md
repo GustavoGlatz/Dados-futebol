@@ -40,9 +40,8 @@ graph TD
 
     %% CI/CD (GitHub Actions)
     subgraph CI_CD [GitHub Actions Workflows]
-        %% CORREÇÃO AQUI: Aspas adicionadas nos dois nós abaixo
-        GH_Lambda["Deploy Lambda\n(Build & Push)"]
-        GH_Glue["Deploy Glue\n(Upload Scripts)"]
+        GH_Lambda["Deploy Lambda"]
+        GH_Glue["Deploy Glue"]
     end
 
     %% Serviços AWS e Componentes
@@ -60,7 +59,7 @@ graph TD
 
         subgraph Transformation ["Processamento (Glue)"]
             GlueTrig[Glue Trigger]
-            Glue["AWS Glue Job\n(PySpark/Python)"]
+            Glue["AWS Glue Job"]
         end
 
         subgraph DataLake [S3 Data Lakehouse]
@@ -78,7 +77,7 @@ graph TD
     %% Fluxo de Deploy (CI/CD)
     GH_Lambda -->|Build & Push Image| ECR
     GH_Lambda -.->|Update Function Code| Lambda
-    GH_Glue -->|Upload .py| Scripts
+    GH_Glue -->|etl_script.py| Scripts
 
     %% Fluxo de Execução
     EB -->|1. Cron Trigger| Lambda
@@ -89,7 +88,6 @@ graph TD
     API -->|3. JSON Response| Lambda
     Lambda -->|4. Write Raw| Bronze
 
-    %% CORREÇÃO ANTERIOR MANTIDA
     GlueTrig -->|"5. Cron Trigger (+15min)"| Glue
     Scripts -.->|Read Script| Glue
     

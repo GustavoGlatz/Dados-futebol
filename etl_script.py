@@ -46,7 +46,7 @@ df_silver = df_exploded.select(
     col("match.id").alias("match_id"),
     to_timestamp(col("match.utcDate")).alias("match_date_full"),
     date_format(
-        to_timestamp(col("match.utcDate")), 
+        from_utc_timestamp(to_timestamp(col("match.utcDate")), "America/Sao_Paulo"), 
         "HH:mm"
     ).alias("match_time"),
     col("match.status").alias("status"),
@@ -60,7 +60,8 @@ df_silver = df_exploded.select(
 
 leagues_data = [
 ("CL", "Champions League"),
-("BSA", "Brasileirão Série A")
+("BSA", "Brasileirão Série A"),
+("2152", "Copa Libertadores")
 ]
 df_leagues = spark.createDataFrame(leagues_data, ["code", "league_name"])
 

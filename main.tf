@@ -261,7 +261,7 @@ resource "aws_glue_job" "football_etl" {
 resource "aws_glue_trigger" "daily_etl_trigger" {
   name     = "football_daily_trigger"
   type     = "SCHEDULED"
-  schedule = "cron(15 13,21 * * ? *)"
+  schedule = "cron(15 14,21 * * ? *)" 
 
   actions {
     job_name = aws_glue_job.football_etl.name
