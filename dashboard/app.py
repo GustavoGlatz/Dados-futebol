@@ -48,7 +48,7 @@ def load_data():
 
         return df_silver, df_gold
     except Exception as e:
-        st.error(f"Não há jogos da Champions nem do Brasileirão hoje")
+        st.error(f"Não há jogos hoje")
         return pd.DataFrame(), pd.DataFrame()
 
 df_matches, df_stats = load_data()
@@ -125,4 +125,4 @@ if not stats_filtered.empty:
             value=f"{stat_row.get('avg_goals_match', 0):.2f}"
         )
 else:
-    st.warning("Estatísticas ainda não calculadas para hoje.")
+    st.warning("Não há estatísticas para hoje")

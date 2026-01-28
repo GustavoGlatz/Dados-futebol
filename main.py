@@ -16,13 +16,14 @@ class FootballDataOrgETL:
     def __init__(self):
         # Configurações da API de Futebol
         self.base_url = "https://api.football-data.org/v4"
-        self.api_key = os.getenv("API_FOOTBALL_DATA_KEY") or os.getenv("API_FOOTBALL_KEY")
+        self.api_key = os.getenv("API_FOOTBALL_DATA_KEY")
         
         if not self.api_key:
             raise ValueError("ERRO: Chave da API não encontrada.")
 
         self.headers = { "X-Auth-Token": self.api_key }
-        self.competitions = ["BSA", "CL"]
+        # 2152 = ID da Copa libertadores 
+        self.competitions = ["BSA", "CL", "2152"]
 
         # Configurações da AWS S3
         self.bucket_name = os.getenv("AWS_S3_BUCKET_NAME")

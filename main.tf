@@ -33,24 +33,61 @@ resource "aws_s3_bucket" "datalake_bucket" {
   }
 }
 
-# REGRA DE LIMPEZA
+# REGRAS DE LIMPEZA
 resource "aws_s3_bucket_lifecycle_configuration" "limpeza_diaria" {
   bucket = aws_s3_bucket.datalake_bucket.id
 
   rule {
-    id     = "regra-apagar-tudo-1-dia"
+    id     = "limpar-camada-raw"
     status = "Enabled"
 
     filter {
-      prefix = "" 
+      prefix = "raw/"
     }
 
     expiration {
       days = 1
     }
-    
-    abort_incomplete_multipart_upload {
-      days_after_initiation = 1
+  }
+
+  rule {
+    id     = "limpar-camada-bronze"
+    status = "Enabled"
+
+    filter {
+      prefix = "bronze/"
+    }
+
+    expiration {
+      days = 1
+    }
+  }
+
+  # REGRA 2: Limpa a pasta SILVER
+  rule {
+    id     = "limpar-camada-silver"
+    status = "Enabled"
+
+    filter {
+      prefix = "silver/"
+    }
+
+    expiration {
+      days = 1
+    }
+  }
+
+  # REGRA 3: Limpa a pasta GOLD
+  rule {
+    id     = "limpar-camada-gold"
+    status = "Enabled"
+
+    filter {
+      prefix = "gold/"
+    }
+
+    expiration {
+      days = 1
     }
   }
 }
@@ -224,7 +261,7 @@ resource "aws_glue_job" "football_etl" {
 resource "aws_glue_trigger" "daily_etl_trigger" {
   name     = "football_daily_trigger"
   type     = "SCHEDULED"
-  schedule = "cron(15 8,21 * * ? *)"
+  schedule = "cron(15 13,21 * * ? *)"
 
   actions {
     job_name = aws_glue_job.football_etl.name
