@@ -109,6 +109,8 @@ else:
 st.subheader(f"Estatísticas da {liga_selecionada if liga_selecionada else '...'}")
 
 if not stats_filtered.empty:
+    stats_filtered = stats_filtered.fillna(0) 
+    
     stat_row = stats_filtered.iloc[0]
     
     col_a, col_b = st.columns(2)
@@ -116,13 +118,13 @@ if not stats_filtered.empty:
     with col_a:
         st.metric(
             label="Quantidade de gols na rodada",
-            value=stat_row.get('total_goals') if stat_row.get('total_goals') is not None else 0
+            value=int(stat_row['total_goals']) 
         ) 
         
     with col_b:
         st.metric(
             label="Média de gols na rodada",
-            value=f"{stat_row.get('avg_goals_match') if stat_row.get('avg_goals_match') is not None else 0:.2f}"
+            value=f"{stat_row['avg_goals_match']:.2f}"
         )
 else:
     st.warning("Não há estatísticas para hoje")
