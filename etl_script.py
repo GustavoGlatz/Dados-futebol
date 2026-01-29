@@ -4,6 +4,7 @@ from awsglue.utils import getResolvedOptions
 from pyspark.context import SparkContext
 from awsglue.context import GlueContext
 from awsglue.job import Job
+from datetime import datetime
 from pyspark.sql.functions import current_timestamp, input_file_name, col, explode, to_date, sum, count, round, avg, date_format, from_utc_timestamp, to_timestamp
 
 # Configuração Inicial do Glue
@@ -27,10 +28,15 @@ bucket.objects.filter(Prefix="bronze/").delete()
 bucket.objects.filter(Prefix="silver/").delete()
 bucket.objects.filter(Prefix="gold/").delete()
 
+data_hoje = datetime.now().strftime("%Y%m%d")
+caminho_arquivo_hoje = f"{base_path}/raw/matches_data_{data_hoje}_*.json"
 
 # CAMADA BRONZE (Raw JSON -> Parquet)
-# Lê os JSONs da pasta raw
-df_raw = spark.read.option("multiline", "true").json(f"{base_path}/raw/*.json")
+try:
+    df_raw = spark.read.option("multiline", "true").json(caminho_arquivo_hoje)
+except Exception as e:
+    print(f"ERRO: Nenhum arquivo encontrado para a data {data_hoje} no caminho {caminho_arquivo_hoje}")
+    raise e
 
 # Adiciona metadados
 df_bronze = df_raw.withColumn("ingestion_date", current_timestamp()) \
