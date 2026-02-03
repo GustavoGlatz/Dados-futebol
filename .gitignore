@@ -17,7 +17,6 @@ dashboard/.streamlit/
 
 # Arquivos do terraform
 .terraform/
-.terraform.lock.hcl
 *.tfstate
 *.tfstate.backup
 

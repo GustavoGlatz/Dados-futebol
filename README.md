@@ -99,25 +99,6 @@ graph TD
     Streamlit -->|10. Display| User
 ```
 
-## 📂 Estrutura de Diretórios
-
-A estrutura do projeto está organizada funcionalmente para separar infraestrutura, lógica de aplicação e scripts de dados.
-
-```bash
-.
-├── dashboard/               # Aplicação de visualização (Streamlit)
-│   ├── app.py              # Ponto de entrada do Dashboard
-│   └── requirements.txt    # Dependências específicas do dashboard
-├── Dockerfile               # Definição da imagem para o worker de ETL
-├── etl_script.py            # Lógica de extração e transformação dos dados
-├── main.py                  # Orquestrador local do pipeline
-├── main.tf                  # Definição da infraestrutura AWS via Terraform
-├── plano.md                 # Documentação de planejamento e backlog
-├── pyproject.toml           # Configuração do projeto e ferramentas
-├── mise.toml                # Configuração de ambiente e ferramentas
-└── requirements.txt         # Dependências do "main.py"
-```
-
 ## 🚀 Destaques Técnicos & Boas Práticas
 
 Este projeto aplica padrões de mercado para garantir qualidade e manutenibilidade:
