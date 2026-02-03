@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+from deltalake import DeltaTable
 
 # CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(
@@ -40,11 +41,13 @@ def load_data():
     try:
         # Carregando SILVER (Partidas detalhadas)
         path_silver = f"s3://{BUCKET_NAME}/silver/matches_cleaned" 
-        df_silver = pd.read_parquet(path_silver, storage_options=storage_options)
+        dt_silver = DeltaTable(path_silver, storage_options=storage_options)
+        df_silver = dt_silver.to_pandas()
         
         # Carregando GOLD (Estatísticas agregadas)
         path_gold = f"s3://{BUCKET_NAME}/gold/daily_league_stats"
-        df_gold = pd.read_parquet(path_gold, storage_options=storage_options)
+        dt_gold = DeltaTable(path_gold, storage_options=storage_options)
+        df_gold = dt_gold.to_pandas()
 
         return df_silver, df_gold
     except Exception as e:
@@ -73,11 +76,10 @@ st.subheader(f"Jogos da {liga_selecionada if liga_selecionada else '...'}")
 
 if not matches_filtered.empty:
     for index, row in matches_filtered.iterrows():
-        # Cria 5 colunas: Logo1 | Gols1 | X | Gols2 | Logo2
+        # colunas: Logo1 | Gols1 | X | Gols2 | Logo2
         c1, c2, c3, c4, c5 = st.columns([1, 1, 0.5, 1, 1])
         
         with c1:
-            # Exibe logo ou nome se não tiver logo
             if 'logo_home' in row and row['logo_home']:
                 st.image(row['logo_home'], width=50)
             else:
@@ -100,7 +102,7 @@ if not matches_filtered.empty:
             else:
                 st.write(row['away_team'])
         
-        st.divider() # Linha divisória entre jogos
+        st.divider()
 else:
     st.info("Nenhuma partida encontrada para esta liga hoje.")
 

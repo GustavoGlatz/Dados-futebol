@@ -33,65 +33,6 @@ resource "aws_s3_bucket" "datalake_bucket" {
   }
 }
 
-# REGRAS DE LIMPEZA
-resource "aws_s3_bucket_lifecycle_configuration" "limpeza_diaria" {
-  bucket = aws_s3_bucket.datalake_bucket.id
-
-  rule {
-    id     = "limpar-camada-raw"
-    status = "Enabled"
-
-    filter {
-      prefix = "raw/"
-    }
-
-    expiration {
-      days = 1
-    }
-  }
-
-  rule {
-    id     = "limpar-camada-bronze"
-    status = "Enabled"
-
-    filter {
-      prefix = "bronze/"
-    }
-
-    expiration {
-      days = 1
-    }
-  }
-
-  # REGRA 2: Limpa a pasta SILVER
-  rule {
-    id     = "limpar-camada-silver"
-    status = "Enabled"
-
-    filter {
-      prefix = "silver/"
-    }
-
-    expiration {
-      days = 1
-    }
-  }
-
-  # REGRA 3: Limpa a pasta GOLD
-  rule {
-    id     = "limpar-camada-gold"
-    status = "Enabled"
-
-    filter {
-      prefix = "gold/"
-    }
-
-    expiration {
-      days = 1
-    }
-  }
-}
-
 # ECR REPOSITORY
 resource "aws_ecr_repository" "repo" {
   name                 = "projeto-futebol" # Nome do repo
@@ -251,13 +192,14 @@ resource "aws_glue_job" "football_etl" {
     python_version  = "3"
   }
 
-  # Passando o nome do bucket como argumento para o script Python
   default_arguments = {
     "--BUCKET_NAME" = aws_s3_bucket.datalake_bucket.bucket
+    "--datalake-formats" = "delta"
+    "--conf"             = "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension --conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog"
   }
 }
 
-# 4. Trigger do Glue
+# Trigger do Glue
 resource "aws_glue_trigger" "daily_etl_trigger" {
   name     = "football_daily_trigger"
   type     = "SCHEDULED"
