@@ -76,6 +76,10 @@ else:
 st.subheader(f"Jogos da {liga_selecionada if liga_selecionada else '...'}")
 
 if not matches_filtered.empty:
+
+    matches_filtered['score_home'] = matches_filtered['score_home'].fillna(0).astype(int)
+    matches_filtered['score_away'] = matches_filtered['score_away'].fillna(0).astype(int)    
+
     for index, row in matches_filtered.iterrows():
         # colunas: Logo1 | Gols1 | X | Gols2 | Logo2
         c1, c2, c3, c4, c5 = st.columns([1, 1, 0.5, 1, 1])
@@ -87,7 +91,7 @@ if not matches_filtered.empty:
                 st.write(row['home_team'])
         
         with c2:
-            st.markdown(f"<div class='score-text'>{row.get('score_home') if row.get('score_home') is not None else 0}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='score-text'>{row['score_home']}</div>", unsafe_allow_html=True)
             
         with c3:
             horario = row.get('match_time', '--:--')
@@ -95,7 +99,7 @@ if not matches_filtered.empty:
             st.markdown("<div class='vs-text'>X</div>", unsafe_allow_html=True)
             
         with c4:
-            st.markdown(f"<div class='score-text'>{row.get('score_away') if row.get('score_away') is not None else 0}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='score-text'>{row['score_away']}</div>", unsafe_allow_html=True)
             
         with c5:
             if 'logo_away' in row and row['logo_away']:
