@@ -77,7 +77,7 @@ df_enriched = df_cleaned.join(
     "left"
 ).drop("code")
 
-w = Window.partitionBy("match_id").orderBy(col("ingestion_ts").desc())
+w = Window.partitionBy("match_id").orderBy(col("ingestion_date").desc())
 df_silver = df_enriched.withColumn("rn", row_number().over(w)).filter(col("rn") == 1).drop("rn")
 
 df_silver.cache()
