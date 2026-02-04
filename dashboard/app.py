@@ -32,8 +32,9 @@ st.markdown("""
 AWS_KEY = st.secrets["AWS_ACCESS_KEY_ID"]
 AWS_SECRET = st.secrets["AWS_SECRET_ACCESS_KEY"]
 BUCKET_NAME = st.secrets["AWS_S3_BUCKET_NAME"] 
+AWS_REGION = st.secrets["AWS_REGION"]
 
-storage_options = {"key": AWS_KEY, "secret": AWS_SECRET}
+storage_options = {"key": AWS_KEY, "secret": AWS_SECRET, "region": AWS_REGION}
 
 # Cache de 5 minutos
 @st.cache_data(ttl=300)
