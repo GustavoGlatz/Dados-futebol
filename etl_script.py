@@ -61,7 +61,7 @@ df_cleaned = df_exploded.select(
     col("match.score.fullTime.away").alias("score_away"),
     col("match.homeTeam.crest").alias("logo_home"),
     col("match.awayTeam.crest").alias("logo_away"),
-    col("ingestion_ts")
+    col("ingestion_date")
 )
 
 leagues_data = [
