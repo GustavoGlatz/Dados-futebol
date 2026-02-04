@@ -19,8 +19,13 @@ spark = glueContext.spark_session
 job = Job(glueContext)
 job.init(args['JOB_NAME'], args)
 
+spark.conf.set("spark.hadoop.fs.s3a.directory.marker.retention", "keep") 
+spark.conf.set("spark.sql.sources.commitProtocolClass", "org.apache.spark.sql.execution.datasources.SQLHadoopMapReduceCommitProtocol")
+spark.conf.set("mapreduce.fileoutputcommitter.marksuccessfuljobs", "false")
+
 bucket_name = args['BUCKET_NAME']
 base_path = f"s3://{bucket_name}"
+
 bronze_path = f"{base_path}/bronze/matches_history"
 path_silver = f"{base_path}/silver/matches_cleaned"
 gold_path = f"{base_path}/gold/daily_league_stats"
@@ -40,7 +45,7 @@ df_bronze = df_raw.withColumn("ingestion_date", to_date(current_timestamp())) \
                   .withColumn("source_file", input_file_name())
 
 df_bronze.cache()
-df_bronze.write.format("delta").mode("append").save(bronze_path)
+df_bronze.coalesce(1).write.format("delta").mode("append").save(bronze_path)
 
 # CAMADA PRATA 
 df_exploded = df_bronze.withColumn("match", explode(col("matches")))
@@ -97,8 +102,7 @@ if DeltaTable.isDeltaTable(spark, path_silver):
     )
 
 else:
-    df_silver.write.format("delta").mode("overwrite").save(path_silver)
-
+    df_silver.coalesce(1).write.format("delta").mode("overwrite").save(path_silver)
 
 # CAMADA OURO
 df_silver.createOrReplaceTempView("silver_matches")
@@ -119,9 +123,23 @@ df_gold = spark.sql("""
         total_goals DESC
     """)
 
-df_gold.write.format("delta").mode("overwrite").save(gold_path)
+df_gold.coalesce(1).write.format("delta").mode("overwrite").option("replaceWhere", "match_day = current_date()").save(gold_path)
 
 df_bronze.unpersist()
 df_silver.unpersist()
+
+def clean_ghost_files(bucket, prefix):
+    s3 = boto3.resource('s3')
+    bucket_obj = s3.Bucket(bucket)
+    for obj in bucket_obj.objects.filter(Prefix=prefix):
+        if obj.key.endswith("_$folder$"):
+            obj.delete()
+
+try:
+    clean_ghost_files(bucket_name, "bronze")
+    clean_ghost_files(bucket_name, "silver")
+    clean_ghost_files(bucket_name, "gold")
+except Exception as e:
+    print(f"Aviso: Não foi possível limpar arquivos fantasmas: {e}")
 
 job.commit()
