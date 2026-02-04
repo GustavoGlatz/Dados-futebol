@@ -3,7 +3,7 @@ import json
 import logging
 import requests
 import boto3
-from datetime import datetime
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
 
@@ -22,12 +22,8 @@ class FootballDataOrgETL:
             raise ValueError("ERRO: Chave da API não encontrada.")
 
         self.headers = { "X-Auth-Token": self.api_key }
-        
-        self.competitions_strategy = {
-            "BSA": "MATCHDAY",   
-            "2152": "MATCHDAY",  
-            "CL": "DATE"
-        }
+        # 2152 = ID da Copa libertadores 
+        self.competitions = ["BSA", "CL", "2152"]
 
         # Configurações da AWS S3
         self.bucket_name = os.getenv("AWS_S3_BUCKET_NAME")
@@ -36,70 +32,55 @@ class FootballDataOrgETL:
 
         self.s3_client = boto3.client('s3')
 
-    def _get_current_matchday(self, competition_id):
-        """Busca o número da rodada atual para uma competição"""
-        endpoint = f"{self.base_url}/competitions/{competition_id}"
-        try:
-            response = requests.get(endpoint, headers=self.headers, timeout=10)
-            if response.status_code == 200:
-                data = response.json()
-                return data.get("currentSeason", {}).get("currentMatchday")
-            else:
-                logging.warning(f"Não foi possível obter matchday para {competition_id}: {response.status_code}")
-                return None
-        except Exception as e:
-            logging.error(f"Erro ao buscar matchday ({competition_id}): {e}")
-            return None
-
     def get_matches(self):
-        """Busca os dados aplicando a estratégia correta por liga"""
-        today = datetime.now().strftime("%Y-%m-%d")
-        current_year = datetime.now().year
+        """Busca os dados com janela de segurança (Hoje + Amanhã)"""
+        
+        now = datetime.now()
+        today_str = now.strftime("%Y-%m-%d")
+        tomorrow_str = (now + timedelta(days=1)).strftime("%Y-%m-%d")
+        
+        current_year = now.year
         all_matches_data = []
 
-        for competition_id, strategy in self.competitions_strategy.items():
-            matches = []
+        for competition_id in self.competitions:
+            # Ajuste de temporada para Champions League
+            if competition_id == "CL":
+                season = current_year - 1
+            else:
+                season = current_year
+
+            # Busca jogos agendados para HOJE e AMANHÃ (UTC)
+            params = { 
+                "season": season, 
+                "dateFrom": today_str, 
+                "dateTo": tomorrow_str 
+            }
             
-            # Ajuste de ano para Champions League (Season europeia começa ano anterior)
-            season = current_year - 1 if competition_id == "CL" else current_year
-            
+            endpoint = f"{self.base_url}/competitions/{competition_id}/matches"
+
             try:
-                if strategy == "MATCHDAY":
-                    matchday = self._get_current_matchday(competition_id)
+                logging.info(f"Buscando {competition_id} de {today_str} ate {tomorrow_str}...")
+                response = requests.get(endpoint, headers=self.headers, params=params, timeout=10)
+                
+                if response.status_code == 200:
+                    matches = response.json().get("matches", [])
                     
-                    if matchday:
-                        logging.info(f"Buscando {competition_id} pela rodada {matchday}...")
-                        endpoint = f"{self.base_url}/competitions/{competition_id}/matches"
-                        params = {"season": season, "matchday": matchday}
-                        
-                        response = requests.get(endpoint, headers=self.headers, params=params, timeout=10)
-                        if response.status_code == 200:
-                            matches = response.json().get("matches", [])
+                    if matches:
+                        all_matches_data.append({
+                            "competition_code": competition_id,
+                            "extraction_date": today_str,
+                            "season": season,
+                            "matches": matches
+                        })
+                        logging.info(f"Dados encontrados: {len(matches)} partidas.")
                     else:
-                        logging.warning(f"Pular {competition_id}: Matchday não encontrado.")
-
+                        logging.info(f"Nenhuma partida encontrada para {competition_id} neste intervalo.")
+                        
                 else:
-                    logging.info(f"Buscando {competition_id} por data ({today})...")
-                    endpoint = f"{self.base_url}/competitions/{competition_id}/matches"
-                    params = {"season": season, "dateFrom": today, "dateTo": today}
-                    
-                    response = requests.get(endpoint, headers=self.headers, params=params, timeout=10)
-                    if response.status_code == 200:
-                        matches = response.json().get("matches", [])
-
-                if matches:
-                    all_matches_data.append({
-                        "competition_code": competition_id,
-                        "extraction_date": today,
-                        "season": season,
-                        "matches": matches
-                    })
-                    logging.info(f"[{competition_id}] Dados encontrados: {len(matches)} partidas.")
-                else:
-                    logging.info(f"[{competition_id}] Nenhuma partida retornada.")
+                    logging.warning(f"Falha na API ({competition_id}): {response.status_code}")
 
             except Exception as e:
-                logging.error(f"Erro processando {competition_id}: {e}")
+                logging.error(f"Erro de conexão: {e}")
 
         return all_matches_data
 
@@ -114,7 +95,6 @@ class FootballDataOrgETL:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"matches_data_{timestamp}.json"
         
-        # Aqui definimos a 'pasta' raw/ concatenando no nome
         s3_key = f"raw/{filename}"
 
         try:
@@ -122,12 +102,10 @@ class FootballDataOrgETL:
             # json.dumps converte o objeto Python (dict) para String JSON
             json_string = json.dumps(data, ensure_ascii=False, indent=4)
             
-            # Converter string para bytes (padrão UTF-8)
             json_bytes = json_string.encode('utf-8')
 
             logging.info(f"Iniciando upload para s3://{self.bucket_name}/{s3_key}")
 
-            # Upload usando put_object
             self.s3_client.put_object(
                 Bucket=self.bucket_name,
                 Key=s3_key,
@@ -138,7 +116,6 @@ class FootballDataOrgETL:
             logging.info("Upload concluído com sucesso!")
 
         except boto3.exceptions.Boto3Error as e:
-            # Captura erros específicos da AWS
             logging.error(f"Erro AWS S3: {e}")
         except Exception as e:
             logging.error(f"Erro genérico ao salvar no S3: {e}")
