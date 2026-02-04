@@ -18,12 +18,34 @@ resource "aws_lambda_permission" "allow_eventbridge" {
   source_arn    = aws_cloudwatch_event_rule.daily_schedule.arn
 }
 
-resource "aws_glue_trigger" "daily_etl_trigger" {
-  name     = "football_daily_trigger"
-  type     = "SCHEDULED"
-  schedule = "cron(15 8 * * ? *)" 
+resource "aws_cloudwatch_event_rule" "s3_upload_trigger" {
+  name        = "trigger-glue-on-s3-upload"
+  description = "Dispara o ETL Glue quando um arquivo JSON cai na RAW"
 
-  actions {
-    job_name = aws_glue_job.football_etl.name
-  }
+  event_pattern = jsonencode({
+    "source": ["aws.s3"],
+    "detail-type": ["Object Created"],
+    "detail": {
+      "bucket": {
+        "name": [aws_s3_bucket.datalake_bucket.bucket]
+      },
+      "object": {
+        "key": [{ "prefix": "raw/" }] 
+      }
+    }
+  })
+}
+
+resource "aws_cloudwatch_event_target" "target_glue_s3" {
+  rule      = aws_cloudwatch_event_rule.s3_upload_trigger.name
+  target_id = "TriggerGlueLambda"
+  arn       = aws_lambda_function.trigger_glue_job.arn
+}
+
+resource "aws_lambda_permission" "allow_eventbridge_trigger_glue" {
+  statement_id  = "AllowExecutionFromEventBridgeS3"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.trigger_glue_job.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.s3_upload_trigger.arn
 }

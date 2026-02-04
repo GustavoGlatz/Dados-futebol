@@ -10,6 +10,11 @@ resource "aws_s3_bucket" "datalake_bucket" {
   }
 }
 
+resource "aws_s3_bucket_notification" "bucket_notification" {
+  bucket      = aws_s3_bucket.datalake_bucket.id
+  eventbridge = true
+}
+
 resource "aws_ecr_repository" "repo" {
   name                 = "projeto-futebol"
   image_tag_mutability = "MUTABLE"

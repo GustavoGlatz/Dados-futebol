@@ -19,6 +19,7 @@ dashboard/.streamlit/
 .terraform/
 *.tfstate
 *.tfstate.backup
+*.zip
 
 # Arquivos de teste
 teste-local/

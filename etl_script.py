@@ -54,11 +54,8 @@ df_cleaned = df_exploded.select(
     col("competition_code"),
     col("season"),
     col("match.id").alias("match_id"),
-    to_timestamp(col("match.utcDate")).alias("match_date_full"),
-    date_format(
-        from_utc_timestamp(to_timestamp(col("match.utcDate")), "America/Sao_Paulo"), 
-        "HH:mm"
-    ).alias("match_time"),
+    from_utc_timestamp(to_timestamp(col("match.utcDate")), "America/Sao_Paulo").alias("match_timestamp_br"),    
+    date_format(col("match_timestamp_br"), "HH:mm").alias("match_time"),,
     col("match.status").alias("status"),
     col("match.homeTeam.name").alias("home_team"),
     col("match.awayTeam.name").alias("away_team"),
@@ -69,6 +66,12 @@ df_cleaned = df_exploded.select(
     col("ingestion_date")
 )
 
+data_referencia = datetime.now().strftime("%Y-%m-%d")
+df_filtered_by_date = df_cleaned.filter(
+    to_date(col("match_timestamp_br")) == to_date(lit(data_referencia))
+)
+
+
 leagues_data = [
 ("CL", "Champions League"),
 ("BSA", "Brasileirão Série A"),
@@ -76,9 +79,9 @@ leagues_data = [
 ]
 df_leagues = spark.createDataFrame(leagues_data, ["code", "league_name"])
 
-df_enriched = df_cleaned.join(
+df_enriched = df_filtered_by_date.join(
     df_leagues,
-    df_cleaned.competition_code == df_leagues.code,
+    df_filtered_by_date.competition_code == df_leagues.code,
     "left"
 ).drop("code")
 

@@ -22,8 +22,12 @@ class FootballDataOrgETL:
             raise ValueError("ERRO: Chave da API não encontrada.")
 
         self.headers = { "X-Auth-Token": self.api_key }
-        # 2152 = ID da Copa libertadores 
-        self.competitions = ["BSA", "CL", "2152"]
+        
+        self.competitions_strategy = {
+            "BSA": "MATCHDAY",   
+            "2152": "MATCHDAY",  
+            "CL": "DATE"
+        }
 
         # Configurações da AWS S3
         self.bucket_name = os.getenv("AWS_S3_BUCKET_NAME")
@@ -32,40 +36,70 @@ class FootballDataOrgETL:
 
         self.s3_client = boto3.client('s3')
 
+    def _get_current_matchday(self, competition_id):
+        """Busca o número da rodada atual para uma competição"""
+        endpoint = f"{self.base_url}/competitions/{competition_id}"
+        try:
+            response = requests.get(endpoint, headers=self.headers, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                return data.get("currentSeason", {}).get("currentMatchday")
+            else:
+                logging.warning(f"Não foi possível obter matchday para {competition_id}: {response.status_code}")
+                return None
+        except Exception as e:
+            logging.error(f"Erro ao buscar matchday ({competition_id}): {e}")
+            return None
+
     def get_matches(self):
-        """Busca os dados"""
+        """Busca os dados aplicando a estratégia correta por liga"""
         today = datetime.now().strftime("%Y-%m-%d")
         current_year = datetime.now().year
         all_matches_data = []
 
-        for competition_id in self.competitions:
-            if competition_id == "CL":
-                season = current_year - 1
-            else:
-                season = current_year
-
-            params = { "season": season, "dateFrom": today, "dateTo": today }
-            endpoint = f"{self.base_url}/competitions/{competition_id}/matches"
-
+        for competition_id, strategy in self.competitions_strategy.items():
+            matches = []
+            
+            # Ajuste de ano para Champions League (Season europeia começa ano anterior)
+            season = current_year - 1 if competition_id == "CL" else current_year
+            
             try:
-                logging.info(f"Buscando {competition_id}...")
-                response = requests.get(endpoint, headers=self.headers, params=params, timeout=10)
-                
-                if response.status_code == 200:
-                    matches = response.json().get("matches", [])
-                    if matches:
-                        all_matches_data.append({
-                            "competition_code": competition_id,
-                            "extraction_date": today,
-                            "season": season,
-                            "matches": matches
-                        })
-                        logging.info(f"Dados encontrados: {len(matches)} partidas.")
+                if strategy == "MATCHDAY":
+                    matchday = self._get_current_matchday(competition_id)
+                    
+                    if matchday:
+                        logging.info(f"Buscando {competition_id} pela rodada {matchday}...")
+                        endpoint = f"{self.base_url}/competitions/{competition_id}/matches"
+                        params = {"season": season, "matchday": matchday}
+                        
+                        response = requests.get(endpoint, headers=self.headers, params=params, timeout=10)
+                        if response.status_code == 200:
+                            matches = response.json().get("matches", [])
+                    else:
+                        logging.warning(f"Pular {competition_id}: Matchday não encontrado.")
+
                 else:
-                    logging.warning(f"Falha na API ({competition_id}): {response.status_code}")
+                    logging.info(f"Buscando {competition_id} por data ({today})...")
+                    endpoint = f"{self.base_url}/competitions/{competition_id}/matches"
+                    params = {"season": season, "dateFrom": today, "dateTo": today}
+                    
+                    response = requests.get(endpoint, headers=self.headers, params=params, timeout=10)
+                    if response.status_code == 200:
+                        matches = response.json().get("matches", [])
+
+                if matches:
+                    all_matches_data.append({
+                        "competition_code": competition_id,
+                        "extraction_date": today,
+                        "season": season,
+                        "matches": matches
+                    })
+                    logging.info(f"[{competition_id}] Dados encontrados: {len(matches)} partidas.")
+                else:
+                    logging.info(f"[{competition_id}] Nenhuma partida retornada.")
 
             except Exception as e:
-                logging.error(f"Erro de conexão: {e}")
+                logging.error(f"Erro processando {competition_id}: {e}")
 
         return all_matches_data
 
