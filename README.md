@@ -32,72 +32,7 @@ A solução foi arquitetada para garantir confiabilidade, escalabilidade e baixo
 
 ### Diagrama de Arquitetura
 
-```mermaid
-graph TD
-    %% Atores Externos
-    API["API-Football (RapidAPI)"]
-    User[Usuário Final]
-
-    %% CI/CD (GitHub Actions)
-    subgraph CI_CD [GitHub Actions Workflows]
-        GH_Lambda["Deploy Lambda"]
-        GH_Glue["Deploy Glue"]
-    end
-
-    %% Serviços AWS e Componentes
-    subgraph AWS [Environment AWS]
-        
-        subgraph Config [Configuração & Imagens]
-            SSM[SSM Parameter Store]
-            ECR[Amazon ECR]
-        end
-
-        subgraph Ingestion ["Ingestão (Lambda)"]
-            EB[EventBridge Schedule]
-            Lambda["AWS Lambda Function\n(Docker Image)"]
-        end
-
-        subgraph Transformation ["Processamento (Glue)"]
-            GlueTrig[Glue Trigger]
-            Glue["AWS Glue Job"]
-        end
-
-        subgraph DataLake [S3 Data Lakehouse]
-            Scripts[Scripts Folder]
-            Bronze[(Camada Bronze\nRaw JSON)]
-            Silver[(Camada Silver\nCleaned Parquet)]
-            Gold[(Camada Gold\nAggregated KPIs)]
-        end
-    end
-
-    subgraph Visualization [Visualização]
-        Streamlit[Streamlit Dashboard]
-    end
-
-    %% Fluxo de Deploy (CI/CD)
-    GH_Lambda -->|Build & Push Image| ECR
-    GH_Lambda -.->|Update Function Code| Lambda
-    GH_Glue -->|etl_script.py| Scripts
-
-    %% Fluxo de Execução
-    EB -->|1. Cron Trigger| Lambda
-    SSM -.->|API Key| Lambda
-    ECR -.->|Pull Image| Lambda
-    
-    Lambda -->|2. GET Request| API
-    API -->|3. JSON Response| Lambda
-    Lambda -->|4. Write Raw| Bronze
-
-    GlueTrig -->|"5. Cron Trigger (+15min)"| Glue
-    Scripts -.->|Read Script| Glue
-    
-    Glue -->|6. Read| Bronze
-    Glue -->|7. Transform| Silver
-    Glue -->|8. Aggregate| Gold
-
-    Streamlit -->|9. Read Cache| Gold
-    Streamlit -->|10. Display| User
-```
+[![Infraestrutura do Projeto](./assets/InfraDiagram.svg)](./assets/InfraDiagram.svg)
 
 ## 🚀 Destaques Técnicos & Boas Práticas
 
