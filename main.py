@@ -92,8 +92,10 @@ class FootballDataOrgETL:
             logging.warning("Nenhum dado para salvar no S3.")
             return
 
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"matches_data_{timestamp}.json"
+        utc_now = datetime.utcnow()
+        brasil_now = utc_now - timedelta(hours=3)
+        data_hoje = brasil_now.strftime("%Y%m%d_%H%M%S")
+        filename = f"matches_data_{data_hoje}.json"
         
         s3_key = f"raw/{filename}"
 
