@@ -56,6 +56,7 @@ df_cleaned = df_exploded.select(
     col("competition_code"),
     col("season"),
     col("match.id").alias("match_id"),
+    to_timestamp(col("match.utcDate")).alias("match_date_full"),
     from_utc_timestamp(to_timestamp(col("match.utcDate")), "America/Sao_Paulo").alias("match_timestamp_br"),    
     date_format(
         from_utc_timestamp(to_timestamp(col("match.utcDate")), "America/Sao_Paulo"), 
