@@ -4,7 +4,7 @@ from awsglue.utils import getResolvedOptions
 from pyspark.context import SparkContext
 from awsglue.context import GlueContext
 from awsglue.job import Job
-from datetime import datetime
+from datetime import datetime, timedelta
 from pyspark.sql.functions import *
 from delta.tables import *
 from pyspark.sql.window import Window
