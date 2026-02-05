@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "boto3>=1.42.32",
-    "delta-spark>=4.0.1",
+    "deltalake>=1.4.1",
     "pandas>=2.3.3",
     "plotly>=6.5.2",
     "pyarrow>=23.0.0",

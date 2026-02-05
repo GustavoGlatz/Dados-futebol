@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from deltalake import DeltaTable
 
 # CONFIGURAÇÃO DA PÁGINA
@@ -36,23 +36,38 @@ AWS_REGION = st.secrets["AWS_REGION"]
 
 storage_options = {"key": AWS_KEY, "secret": AWS_SECRET, "region": AWS_REGION}
 
+def get_brasil_date_str():
+    brasil_now = datetime.utcnow() - timedelta(hours=3)
+    return brasil_now.strftime("%Y-%m-%d")
+
 # Cache de 5 minutos
 @st.cache_data(ttl=300)
 def load_data():
+
+    data_hoje = get_brasil_date_str()
+
     try:
-        # Carregando SILVER (Partidas detalhadas)
-        path_silver = f"s3://{BUCKET_NAME}/silver/matches_cleaned" 
+        # --- CARREGANDO SILVER ---
+        path_silver = f"s3://{BUCKET_NAME}/silver/matches_cleaned"
         dt_silver = DeltaTable(path_silver, storage_options=storage_options)
         df_silver = dt_silver.to_pandas()
         
-        # Carregando GOLD (Estatísticas agregadas)
+        if not df_silver.empty:
+            df_silver['match_timestamp_br'] = pd.to_datetime(df_silver['match_timestamp_br'])
+            df_silver = df_silver[df_silver['match_timestamp_br'].dt.strftime('%Y-%m-%d') == data_hoje]
+
+        # --- CARREGANDO GOLD ---
         path_gold = f"s3://{BUCKET_NAME}/gold/daily_league_stats"
         dt_gold = DeltaTable(path_gold, storage_options=storage_options)
         df_gold = dt_gold.to_pandas()
+        
+        if not df_gold.empty:
+            df_gold['match_day'] = pd.to_datetime(df_gold['match_day'])
+            df_gold = df_gold[df_gold['match_day'].dt.strftime('%Y-%m-%d') == data_hoje]
 
         return df_silver, df_gold
     except Exception as e:
-        st.error(f"Não há jogos hoje")
+        st.error(f"Não há jogos hoje: {e}")
         return pd.DataFrame(), pd.DataFrame()
 
 df_matches, df_stats = load_data()
