@@ -43,7 +43,7 @@ except Exception as e:
     sys.exit(0)
 
 # CAMADA BRONZE 
-df_bronze = df_raw.withColumn("ingestion_date", to_date(current_timestamp())) \
+df_bronze = df_raw.withColumn("ingestion_date", lit(data_hoje)) \
                   .withColumn("source_file", input_file_name())
 
 df_bronze.cache()
@@ -72,9 +72,8 @@ df_cleaned = df_exploded.select(
     col("ingestion_date")
 )
 
-data_referencia = datetime.now().strftime("%Y-%m-%d")
 df_filtered_by_date = df_cleaned.filter(
-    to_date(col("match_timestamp_br")) == to_date(lit(data_referencia))
+    to_date(col("match_timestamp_br")) == to_date(lit(data_hoje))
 )
 
 
