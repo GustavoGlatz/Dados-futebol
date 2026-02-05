@@ -55,7 +55,10 @@ df_cleaned = df_exploded.select(
     col("season"),
     col("match.id").alias("match_id"),
     from_utc_timestamp(to_timestamp(col("match.utcDate")), "America/Sao_Paulo").alias("match_timestamp_br"),    
-    date_format(col("match_timestamp_br"), "HH:mm").alias("match_time"),
+    date_format(
+        from_utc_timestamp(to_timestamp(col("match.utcDate")), "America/Sao_Paulo"), 
+        "HH:mm"
+    ).alias("match_time"),
     col("match.status").alias("status"),
     col("match.homeTeam.name").alias("home_team"),
     col("match.awayTeam.name").alias("away_team"),
