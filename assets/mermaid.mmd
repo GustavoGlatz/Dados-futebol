@@ -1,0 +1,51 @@
+flowchart LR
+ subgraph CI_CD["GitHub Actions Workflows"]
+        GH_Lambda["Deploy Lambda (Imagem)"]
+        GH_Glue["Deploy Glue Script"]
+  end
+ subgraph Config["Configuração & Imagens"]
+        SSM["SSM Parameter Store"]
+        ECR["Amazon ECR"]
+  end
+ subgraph EventBridges["EventBridge"]
+        EB_S3["EventBridge (Object Created in bronze)"]
+        EB_Schedule["EventBridge Cron Schedule"]
+  end
+ subgraph Ingestion["AWS Lambda"]
+        LambdaIngest["Lambda API Ingestion"]
+        LambdaTrigger["Lambda Trigger Glue"]
+  end
+ subgraph Transformation["Glue"]
+        Glue["AWS Glue Job"]
+  end
+ subgraph DataLake["S3 Data Lakehouse"]
+        Bronze[("Camada Bronze")]
+        Silver[("Camada Silver")]
+        Gold[("Camada Gold")]
+        Scripts["Scripts Folder"]
+  end
+ subgraph AWS["Environment AWS"]
+        Config
+        EventBridges
+        Ingestion
+        Transformation
+        DataLake
+  end
+ subgraph Visualization["Visualização"]
+        Streamlit["Streamlit Dashboard"]
+  end
+    GH_Lambda -- Build & Push Image --> ECR
+    GH_Glue -- Push Script --> Scripts
+    EB_Schedule -- Cron Trigger --> LambdaIngest
+    EB_S3 -- S3 Object Created --> LambdaTrigger
+    SSM -. API Key .-> LambdaIngest
+    ECR -. Pull Image .-> LambdaIngest
+    API["API Football"] -- JSON Response --> LambdaIngest
+    LambdaIngest -- Write Raw --> Bronze
+    LambdaTrigger -- StartJobRun --> Glue
+    Scripts -. Read Script .-> Glue
+    Glue -- Read --> Bronze
+    Glue -- Transform --> Silver
+    Glue -- Aggregate --> Gold
+    Streamlit -- Read --> Gold
+    Streamlit -- Display --> User["Usuário Final"]
