@@ -1,7 +1,7 @@
 resource "aws_cloudwatch_event_rule" "daily_schedule" {
   name                = "projeto-futebol-daily"
-  description         = "Dispara o ETL todo dia as 08:00 UTC e as 21:00 UTC"
-  schedule_expression = "cron(0 8,21 * * ? *)"
+  description         = "Dispara o ETL todo dia as 08:00 UTC e as 23:00 UTC"
+  schedule_expression = "cron(0 8,23 * * ? *)"
 }
 
 resource "aws_cloudwatch_event_target" "trigger_lambda" {

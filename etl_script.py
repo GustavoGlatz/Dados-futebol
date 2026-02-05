@@ -31,7 +31,9 @@ path_silver = f"{base_path}/silver/matches_cleaned"
 gold_path = f"{base_path}/gold/daily_league_stats"
 
 # LEITURA DO ARQUIVO RAW
-data_hoje = datetime.now().strftime("%Y%m%d")
+utc_now = datetime.utcnow()
+brasil_now = utc_now - timedelta(hours=3)
+data_hoje = brasil_now.strftime("%Y%m%d")
 caminho_arquivo_hoje = f"{base_path}/raw/matches_data_{data_hoje}_*.json"
 
 try:
