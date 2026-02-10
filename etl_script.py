@@ -64,8 +64,8 @@ match_schema = StructType([
     ]), True),
     StructField("score", StructType([
         StructField("fullTime", StructType([
-            StructField("home", IntegerType(), True),
-            StructField("away", IntegerType(), True),
+            StructField("home", LongType(), True),
+            StructField("away", LongType(), True),
         ]), True),
     ]), True),
     StructField("referees", ArrayType(referee_schema), True),
