@@ -32,7 +32,7 @@ A solução foi arquitetada para garantir confiabilidade, escalabilidade e baixo
 
 ### Diagrama de Arquitetura
 
-[![Infraestrutura do Projeto](./assets/InfraDiagram.svg)](./assets/InfraDiagram.svg)
+[![Infraestrutura do Projeto](./assets/InfraDiagram.svg)](https://raw.githubusercontent.com/GustavoGlatz/Dados-futebol/refs/heads/main/assets/InfraDiagram.svg)
 
 ## 🚀 Destaques Técnicos & Boas Práticas
 

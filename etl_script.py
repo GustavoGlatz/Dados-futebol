@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from pyspark.sql.functions import *
 from delta.tables import *
 from pyspark.sql.window import Window
-from pyspark.sql.types import IntegerType
+from pyspark.sql.types import IntegerType, StructType, StructField, StringType, LongType, ArrayType
 
 
 args = getResolvedOptions(sys.argv, ['JOB_NAME', 'BUCKET_NAME'])
@@ -37,15 +37,49 @@ utc_now = datetime.utcnow()
 brasil_now = utc_now - timedelta(hours=3)
 
 data_arquivo_str = brasil_now.strftime("%Y%m%d")
-
 data_filtro_iso = brasil_now.strftime("%Y-%m-%d")
 
 
 # RAW
 caminho_arquivo_hoje = f"{base_path}/raw/matches_data_{data_arquivo_str}_*.json"
 
+referee_schema = StructType([
+    StructField("id", LongType(), True),
+    StructField("name", StringType(), True),
+    StructField("nationality", StringType(), True),
+    StructField("type", StringType(), True),
+])
+
+match_schema = StructType([
+    StructField("id", LongType(), True),
+    StructField("utcDate", StringType(), True),
+    StructField("status", StringType(), True),
+    StructField("homeTeam", StructType([
+        StructField("name", StringType(), True),
+        StructField("crest", StringType(), True),
+    ]), True),
+    StructField("awayTeam", StructType([
+        StructField("name", StringType(), True),
+        StructField("crest", StringType(), True),
+    ]), True),
+    StructField("score", StructType([
+        StructField("fullTime", StructType([
+            StructField("home", IntegerType(), True),
+            StructField("away", IntegerType(), True),
+        ]), True),
+    ]), True),
+    StructField("referees", ArrayType(referee_schema), True),
+])
+
+raw_schema = StructType([
+    StructField("competition_code", StringType(), True),
+    StructField("extraction_date", StringType(), True),
+    StructField("season", LongType(), True),
+    StructField("matches", ArrayType(match_schema), True),
+])
+
 try:
-    df_raw = spark.read.option("multiline", "true").json(caminho_arquivo_hoje)
+    df_raw = spark.read.schema(raw_schema).option("multiline", "true").json(caminho_arquivo_hoje)
 except Exception as e:
     print(f"ERRO: Nenhum arquivo encontrado em {caminho_arquivo_hoje}. Encerrando Job.")
     sys.exit(0)
